@@ -19,11 +19,13 @@ app = ctk.CTk()
 app.geometry("400x400") 
 app.title("Modern Login UI using Customtkinter") 
 
+#Define function to read data in from spreadsheet
 def read_excel(file_path):
     # Load the Excel file
     df = pd.read_excel(file_path)
     return df
 
+#Set up global variable like session keys 
 file_path = 'account_data.xlsx'
 readData = read_excel(file_path)
 global usernames, passwords, key, aes, iv, auth_secret_key
@@ -32,19 +34,26 @@ usernames = readData['usernames'].to_numpy()
 passwords = readData['passwords'].to_numpy()
 iv = secrets.randbits(256)
 passwordSalt = os.urandom(16)
+# key = readData['key'].to_numpy()
+# key = key[0]
 auth_secret_key = 'password'
 
+#Create the google auth session and the qr code needed. Save qr code as local png file
 totp_auth = pyotp.totp.TOTP(auth_secret_key).provisioning_uri( name='2FA Project', issuer_name='Cole Blakeman') 
 qrcode.make(totp_auth).save("qr_auth.png") 
 totp_qr = pyotp.TOTP(auth_secret_key) 
 totp = pyotp.TOTP(auth_secret_key)
              
 
+#Function to handle the login process
 def login(): 
+    #Check that username exists
     if(user_entry.get() in usernames):
         index = np.where(usernames == user_entry.get())
         # password = decrypt(passwords[index])
         password = passwords[index]
+        #Check given password matches stored password
+        #If so display the next screen for google auth
         if user_pass.get() == password: 
             login_frame.forget()
             qr_frame.pack(pady=20,padx=40,fill='both',expand=True) 
@@ -52,12 +61,14 @@ def login():
             auth_enter_button = ctk.CTkButton(master=qr_frame,text='Enter',command=lambda: checkAuth(google_auth_code.get())) 
             auth_enter_button.pack(pady=12,padx=10) 
 
+        #If invalid password, display error
         elif user_pass.get() != password: 
             tkmb.showwarning(title='Wrong password',message='Please check your password') 
+    #If username doesnt exist, display error
     else: 
         tkmb.showerror(title="Login Failed",message="Invalid Username") 
             
-
+#Function to validate the google auth code
 def checkAuth(authCode):
     auth_passed = totp.verify(google_auth_code.get())
     if(not auth_passed): 
@@ -68,7 +79,7 @@ def checkAuth(authCode):
         app.destroy()
 
 
-
+#Function to handle creating the account 
 def createAccount():
     login_frame.forget()
     account_frame.pack(pady=20,padx=40,fill='both',expand=True) 
@@ -91,10 +102,13 @@ def createAccount():
     account_creation_button.pack(pady=12,padx=10) 
 	
 
-
+#Function to check data when creating an account
 def validateAccountCreation(username, password, verifyPassword):
+    #Make sure username doesnt already exist
     if(not(username in usernames)):
+        #Make sure given password isnt empty
         if(password != ""):
+            #if passwords match, show the qr code and move to the next screen
             if(password == verifyPassword):
                  tkmb.showinfo(title="Account Created",message="Account created! Welcome!")
                 #  encrypted_password = encrypt(password)
@@ -106,8 +120,7 @@ def validateAccountCreation(username, password, verifyPassword):
                  plt.axis('off')  # Hide the axis
                  plt.show()
                  account_frame.forget()
-                 login_frame.pack(pady=20,padx=40,fill='both',expand=True)
-                
+                 login_frame.pack(pady=20,padx=40,fill='both',expand=True)     
 
             else: 
                 tkmb.showerror(title="Account Creation Failed",message="Passwords dont match")
