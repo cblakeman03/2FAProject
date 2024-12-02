@@ -33,15 +33,20 @@ def read_excel(file_path):
 #Set up global variable like session keys 
 file_path = 'account_data.xlsx'
 readData = read_excel(file_path)
+print(readData)
 global usernames, passwords, key, aes, iv, auth_secret_key
 key_password = 'password'
 usernames = readData['usernames'].to_numpy()
 passwords = readData['passwords'].to_numpy()
-iv = secrets.randbits(256)
-passwordSalt = os.urandom(16)
-# key = readData['key'].to_numpy()
-# key = key[0]
+
+iv = 6298732243870306927163621570636815308153224083925445293422908981082598441466
+passwordSalt = b'\xa3\xe0\x13\xe8\x03\x95\xcb\xda\xf3A\x16]\x96/B\x99'
+print('passwordSalt', passwordSalt)
+print('iv', iv)
+
 auth_secret_key = 'password'
+key = b'\x87Tm\xcbw\x9eI>*\xe8\x9a\xab_AtZ\rA\n!\xb5\xba\x08\x08\xd9u`z\xcb\xae\x83"'
+
 
 #Create the google auth session and the qr code needed. Save qr code as local png file
 totp_auth = pyotp.totp.TOTP(auth_secret_key).provisioning_uri( name='2FA Project', issuer_name='Cole Blakeman') 
@@ -54,8 +59,10 @@ totp = pyotp.TOTP(auth_secret_key)
 def login(): 
     #Check that username exists
     if(user_entry.get() in usernames):
-        index = np.where(usernames == user_entry.get())
-        password = passwords[index]
+        index = np.where(usernames == user_entry.get())[0][0]
+        # password = passwords[index]
+        print()
+        password = decrypt(passwords[index])
         #Check given password matches stored password
         #If so display the next screen for google auth
         if user_pass.get() == password: 
@@ -114,8 +121,9 @@ def validateAccountCreation(username, password, verifyPassword):
         if(password != ""):
             #if passwords match, show the qr code and move to the next screen
             if(password == verifyPassword):
+                 encrypted_password = encrypt(password)
                  tkmb.showinfo(title="Account Created",message="Account created! Welcome!")
-                 write_to_excel(username, password, file_path)
+                 write_to_excel(username, encrypted_password, file_path)
                  image_path = 'qr_auth.png'
                  img = mpimg.imread(image_path)
                  plt.imshow(img)
@@ -130,6 +138,37 @@ def validateAccountCreation(username, password, verifyPassword):
             tkmb.showerror(title="Account Creation Failed",message="Password cant be empty")
     else:
         tkmb.showerror(title="Account Creation Failed",message="Username Already Exists") 
+
+
+def encrypt(password):
+    # Encrypt the plaintext with the given key:
+    # ciphertext = AES-256-CTR-Encrypt(plaintext, key, iv)
+    plaintext = password
+    print('encrypt plaintext', plaintext)
+    print('in encrypt key', key)
+    print('iv', iv)
+    aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
+    ciphertext = aes.encrypt(plaintext)
+    print('test encrypt ciphertext', ciphertext)
+    aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
+    plaintext = aes.decrypt(ciphertext)
+    print('test decrypt', plaintext)
+    return ciphertext
+
+
+def decrypt(ciphertext):
+    # Decrypt the ciphertext with the given key:
+    # plaintext = AES-256-CTR-Decrypt(ciphertext, key, iv)
+    aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
+    print('d key: ' , key)
+    print('cyphertext: ', ciphertext)
+    print('decrypt iv', iv)
+    decrypted = aes.decrypt(ciphertext)
+    print('decrypt password: ', decrypted)
+    label = ctk.CTkLabel(app,text="Welcome User") 
+    label.pack(pady=20) 
+    return decrypted.decode('utf-8')
+
 
 # Writing to an Excel file
 def write_to_excel(username, password, file_path):
