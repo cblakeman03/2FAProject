@@ -38,12 +38,8 @@ global usernames, passwords, key, aes, iv, auth_secret_key
 key_password = 'password'
 usernames = readData['usernames'].to_numpy()
 passwords = readData['passwords'].to_numpy()
-
 iv = 6298732243870306927163621570636815308153224083925445293422908981082598441466
 passwordSalt = b'\xa3\xe0\x13\xe8\x03\x95\xcb\xda\xf3A\x16]\x96/B\x99'
-print('passwordSalt', passwordSalt)
-print('iv', iv)
-
 auth_secret_key = 'password'
 key = b'\x87Tm\xcbw\x9eI>*\xe8\x9a\xab_AtZ\rA\n!\xb5\xba\x08\x08\xd9u`z\xcb\xae\x83"'
 
@@ -144,15 +140,8 @@ def encrypt(password):
     # Encrypt the plaintext with the given key:
     # ciphertext = AES-256-CTR-Encrypt(plaintext, key, iv)
     plaintext = password
-    print('encrypt plaintext', plaintext)
-    print('in encrypt key', key)
-    print('iv', iv)
     aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
     ciphertext = aes.encrypt(plaintext)
-    print('test encrypt ciphertext', ciphertext)
-    aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
-    plaintext = aes.decrypt(ciphertext)
-    print('test decrypt', plaintext)
     return ciphertext
 
 
