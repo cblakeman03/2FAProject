@@ -5,7 +5,9 @@ import pandas as pd
 import numpy as np
 import time 
 import pyotp 
-import qrcode 
+import qrcode
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 
 # Selecting GUI theme - dark, light , system (for system default) 
 ctk.set_appearance_mode("dark") 
@@ -20,8 +22,6 @@ app.title("Modern Login UI using Customtkinter")
 def read_excel(file_path):
     # Load the Excel file
     df = pd.read_excel(file_path)
-    print("Data read from Excel:")
-    print(df)
     return df
 
 file_path = 'account_data.xlsx'
@@ -34,35 +34,38 @@ iv = secrets.randbits(256)
 passwordSalt = os.urandom(16)
 auth_secret_key = 'password'
 
+totp_auth = pyotp.totp.TOTP(auth_secret_key).provisioning_uri( name='2FA Project', issuer_name='Cole Blakeman') 
+qrcode.make(totp_auth).save("qr_auth.png") 
+totp_qr = pyotp.TOTP(auth_secret_key) 
+totp = pyotp.TOTP(auth_secret_key)
+             
+
 def login(): 
     if(user_entry.get() in usernames):
         index = np.where(usernames == user_entry.get())
-        print('in login pass', passwords[index])
         # password = decrypt(passwords[index])
         password = passwords[index]
         if user_pass.get() == password: 
             login_frame.forget()
             qr_frame.pack(pady=20,padx=40,fill='both',expand=True) 
-            totp_auth = pyotp.totp.TOTP(auth_secret_key).provisioning_uri( name='Dwaipayan_Bandyopadhyay', issuer_name='GeeksforGeeks') 
-            print(totp_auth)
-            qrcode.make(totp_auth).save("qr_auth.png") 
-            totp_qr = pyotp.TOTP(auth_secret_key) 
-            totp = pyotp.TOTP(auth_secret_key) 
             auth_passed = False
-            while not auth_passed: 
-                auth_passed = totp.verify(input(("Enter the Code : ")))
-                print(auth_passed)
-                if(not auth_passed): 
-                    tkmb.showinfo(title="Wrong auth code",message="Please check your google authentication code") 
-
-            tkmb.showinfo(title="Login Successful",message="You have logged in Successfully") 
-
+            auth_enter_button = ctk.CTkButton(master=qr_frame,text='Enter',command=lambda: checkAuth(google_auth_code.get())) 
+            auth_enter_button.pack(pady=12,padx=10) 
 
         elif user_pass.get() != password: 
             tkmb.showwarning(title='Wrong password',message='Please check your password') 
     else: 
         tkmb.showerror(title="Login Failed",message="Invalid Username") 
             
+
+def checkAuth(authCode):
+    auth_passed = totp.verify(google_auth_code.get())
+    if(not auth_passed): 
+        tkmb.showinfo(title="Wrong auth code",message="Please check your google authentication code") 
+    else:
+        tkmb.showinfo(title="Login Successful",message="You have logged in Successfully") 
+        qr_frame.forget()
+        app.destroy()
 
 
 
@@ -90,10 +93,6 @@ def createAccount():
 
 
 def validateAccountCreation(username, password, verifyPassword):
-    print('in validate')
-    print('validation: ', username)
-    print('validation: ', password)
-    print(verifyPassword)
     if(not(username in usernames)):
         if(password != ""):
             if(password == verifyPassword):
@@ -101,8 +100,14 @@ def validateAccountCreation(username, password, verifyPassword):
                 #  encrypted_password = encrypt(password)
                 #  print("validation enc pass: ", encrypted_password)
                  write_to_excel(username, password, file_path)
+                 image_path = 'qr_auth.png'
+                 img = mpimg.imread(image_path)
+                 plt.imshow(img)
+                 plt.axis('off')  # Hide the axis
+                 plt.show()
                  account_frame.forget()
                  login_frame.pack(pady=20,padx=40,fill='both',expand=True)
+                
 
             else: 
                 tkmb.showerror(title="Account Creation Failed",message="Passwords dont match")
@@ -148,7 +153,6 @@ def write_to_excel(username, password, file_path):
     usernames = np.append(usernames, username, axis = None)
     passwords = np.append(passwords, password, axis = None)
     data = {'usernames': usernames, 'passwords': passwords}
-    print('write excel', data)
     df = pd.DataFrame(data)
     df.to_excel(file_path, index = False)
 
@@ -177,6 +181,9 @@ login_button.pack(pady=12,padx=10)
 
 create_account_button = ctk.CTkButton(master=login_frame,text='Create Account',command=createAccount) 
 create_account_button.pack(pady=12,padx=10) 
+
+google_auth_code = ctk.CTkEntry(master=qr_frame,placeholder_text="auth_code") 
+google_auth_code.pack(pady=12,padx=10)
 
 
 
