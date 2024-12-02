@@ -3,6 +3,9 @@ import tkinter.messagebox as tkmb
 import pyaes, pbkdf2, binascii, os, secrets
 import pandas as pd
 import numpy as np
+import time 
+import pyotp 
+import qrcode 
 
 # Selecting GUI theme - dark, light , system (for system default) 
 ctk.set_appearance_mode("dark") 
@@ -23,19 +26,38 @@ def read_excel(file_path):
 
 file_path = 'account_data.xlsx'
 readData = read_excel(file_path)
-global usernames, passwords, keys, iv
+global usernames, passwords, key, aes, iv, auth_secret_key
+key_password = 'password'
 usernames = readData['usernames'].to_numpy()
 passwords = readData['passwords'].to_numpy()
-keys = readData['keys'].to_numpy()
 iv = secrets.randbits(256)
+passwordSalt = os.urandom(16)
+auth_secret_key = 'password'
 
 def login(): 
     if(user_entry.get() in usernames):
         index = np.where(usernames == user_entry.get())
-        password = decrypt(passwords[index], keys[index])
+        print('in login pass', passwords[index])
+        # password = decrypt(passwords[index])
+        password = passwords[index]
         if user_pass.get() == password: 
+            login_frame.forget()
+            qr_frame.pack(pady=20,padx=40,fill='both',expand=True) 
+            totp_auth = pyotp.totp.TOTP(auth_secret_key).provisioning_uri( name='Dwaipayan_Bandyopadhyay', issuer_name='GeeksforGeeks') 
+            print(totp_auth)
+            qrcode.make(totp_auth).save("qr_auth.png") 
+            totp_qr = pyotp.TOTP(auth_secret_key) 
+            totp = pyotp.TOTP(auth_secret_key) 
+            auth_passed = False
+            while not auth_passed: 
+                auth_passed = totp.verify(input(("Enter the Code : ")))
+                print(auth_passed)
+                if(not auth_passed): 
+                    tkmb.showinfo(title="Wrong auth code",message="Please check your google authentication code") 
+
             tkmb.showinfo(title="Login Successful",message="You have logged in Successfully") 
-            ctk.CTkLabel(new_window,text="GeeksforGeeks is best for learning ANYTHING !!").pack() 
+
+
         elif user_pass.get() != password: 
             tkmb.showwarning(title='Wrong password',message='Please check your password') 
     else: 
@@ -69,16 +91,16 @@ def createAccount():
 
 def validateAccountCreation(username, password, verifyPassword):
     print('in validate')
-    print(username)
-    print(password)
+    print('validation: ', username)
+    print('validation: ', password)
     print(verifyPassword)
     if(not(username in usernames)):
         if(password != ""):
             if(password == verifyPassword):
                  tkmb.showinfo(title="Account Created",message="Account created! Welcome!")
-                 encrypted_password = encrypt(user_pass.get())
-                 print("enc pass: ", encrypted_password)
-                 write_to_excel(username, encrypted_password, file_path)
+                #  encrypted_password = encrypt(password)
+                #  print("validation enc pass: ", encrypted_password)
+                 write_to_excel(username, password, file_path)
                  account_frame.forget()
                  login_frame.pack(pady=20,padx=40,fill='both',expand=True)
 
@@ -89,30 +111,33 @@ def validateAccountCreation(username, password, verifyPassword):
     else:
         tkmb.showerror(title="Account Creation Failed",message="Username Already Exists") 
         
-def encrypt(password):
-	# Derive a 256-bit AES encryption key from the password
-    passwordSalt = os.urandom(16)
-    key = pbkdf2.PBKDF2(password, passwordSalt).read(32)
-    global keys
-    keys = np.append(keys, key, axis = None)
-    # Encrypt the plaintext with the given key:
-    # ciphertext = AES-256-CTR-Encrypt(plaintext, key, iv)
-    plaintext = password
-    aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
-    ciphertext = aes.encrypt(plaintext)
-    return ciphertext
+# def encrypt(password):
+#     # Encrypt the plaintext with the given key:
+#     # ciphertext = AES-256-CTR-Encrypt(plaintext, key, iv)
+#     plaintext = password
+#     print('encrypt plaintext', plaintext)
+#     aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
+#     ciphertext = aes.encrypt(plaintext)
+#     print('test encrypt ciphertext', ciphertext)
+#     aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
+#     plaintext = aes.decrypt(ciphertext)
+#     print('test decrypt', plaintext)
+#     return ciphertext
 
-def decrypt(ciphertext, key):
-    # Decrypt the ciphertext with the given key:
-    # plaintext = AES-256-CTR-Decrypt(ciphertext, key, iv)
-    print('d key: ' , key)
+# def decrypt(ciphertext):
+#     # Decrypt the ciphertext with the given key:
+#     # plaintext = AES-256-CTR-Decrypt(ciphertext, key, iv)
+#     aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
+#     print('d key: ' , key)
+#     print('cyphertext: ', ciphertext)
+#     print('decrypt', iv)
 
-    aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
-    decrypted = aes.decrypt(ciphertext)
+#     decrypted = aes.decrypt(ciphertext)
+#     print('decrypt password: ', decrypted)
 
-    label = ctk.CTkLabel(app,text="Welcome User") 
+#     label = ctk.CTkLabel(app,text="Welcome User") 
 
-    label.pack(pady=20) 
+#     label.pack(pady=20) 
    
 
 
@@ -122,7 +147,8 @@ def write_to_excel(username, password, file_path):
     global usernames, passwords 
     usernames = np.append(usernames, username, axis = None)
     passwords = np.append(passwords, password, axis = None)
-    data = {'usernames': usernames, 'passwords': passwords, 'keys': keys}
+    data = {'usernames': usernames, 'passwords': passwords}
+    print('write excel', data)
     df = pd.DataFrame(data)
     df.to_excel(file_path, index = False)
 
@@ -132,6 +158,8 @@ login_frame = ctk.CTkFrame(master=app)
 login_frame.pack(pady=20,padx=40,fill='both',expand=True) 
 
 account_frame = ctk.CTkFrame(master=app)
+
+qr_frame = ctk.CTkFrame(master=app)
 
 label = ctk.CTkLabel(master=login_frame,text='Enter Login Credentials') 
 label.pack(pady=12,padx=10) 
