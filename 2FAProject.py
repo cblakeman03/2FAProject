@@ -33,7 +33,6 @@ def read_excel(file_path):
 #Set up global variable like session keys 
 file_path = 'account_data.xlsx'
 readData = read_excel(file_path)
-print(readData)
 global usernames, passwords, key, aes, iv, auth_secret_key
 key_password = 'password'
 usernames = readData['usernames'].to_numpy()
@@ -57,7 +56,6 @@ def login():
     if(user_entry.get() in usernames):
         index = np.where(usernames == user_entry.get())[0][0]
         # password = passwords[index]
-        print()
         password = decrypt(passwords[index])
         #Check given password matches stored password
         #If so display the next screen for google auth
@@ -149,11 +147,7 @@ def decrypt(ciphertext):
     # Decrypt the ciphertext with the given key:
     # plaintext = AES-256-CTR-Decrypt(ciphertext, key, iv)
     aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
-    print('d key: ' , key)
-    print('cyphertext: ', ciphertext)
-    print('decrypt iv', iv)
     decrypted = aes.decrypt(ciphertext)
-    print('decrypt password: ', decrypted)
     label = ctk.CTkLabel(app,text="Welcome User") 
     label.pack(pady=20) 
     return decrypted.decode('utf-8')
