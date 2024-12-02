@@ -1,3 +1,8 @@
+#Cole Blakeman 
+#CSC 455
+#Final Project
+
+
 import customtkinter as ctk 
 import tkinter.messagebox as tkmb 
 import pyaes, pbkdf2, binascii, os, secrets
@@ -50,7 +55,6 @@ def login():
     #Check that username exists
     if(user_entry.get() in usernames):
         index = np.where(usernames == user_entry.get())
-        # password = decrypt(passwords[index])
         password = passwords[index]
         #Check given password matches stored password
         #If so display the next screen for google auth
@@ -111,8 +115,6 @@ def validateAccountCreation(username, password, verifyPassword):
             #if passwords match, show the qr code and move to the next screen
             if(password == verifyPassword):
                  tkmb.showinfo(title="Account Created",message="Account created! Welcome!")
-                #  encrypted_password = encrypt(password)
-                #  print("validation enc pass: ", encrypted_password)
                  write_to_excel(username, password, file_path)
                  image_path = 'qr_auth.png'
                  img = mpimg.imread(image_path)
@@ -128,36 +130,6 @@ def validateAccountCreation(username, password, verifyPassword):
             tkmb.showerror(title="Account Creation Failed",message="Password cant be empty")
     else:
         tkmb.showerror(title="Account Creation Failed",message="Username Already Exists") 
-        
-# def encrypt(password):
-#     # Encrypt the plaintext with the given key:
-#     # ciphertext = AES-256-CTR-Encrypt(plaintext, key, iv)
-#     plaintext = password
-#     print('encrypt plaintext', plaintext)
-#     aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
-#     ciphertext = aes.encrypt(plaintext)
-#     print('test encrypt ciphertext', ciphertext)
-#     aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
-#     plaintext = aes.decrypt(ciphertext)
-#     print('test decrypt', plaintext)
-#     return ciphertext
-
-# def decrypt(ciphertext):
-#     # Decrypt the ciphertext with the given key:
-#     # plaintext = AES-256-CTR-Decrypt(ciphertext, key, iv)
-#     aes = pyaes.AESModeOfOperationCTR(key, pyaes.Counter(iv))
-#     print('d key: ' , key)
-#     print('cyphertext: ', ciphertext)
-#     print('decrypt', iv)
-
-#     decrypted = aes.decrypt(ciphertext)
-#     print('decrypt password: ', decrypted)
-
-#     label = ctk.CTkLabel(app,text="Welcome User") 
-
-#     label.pack(pady=20) 
-   
-
 
 # Writing to an Excel file
 def write_to_excel(username, password, file_path):
